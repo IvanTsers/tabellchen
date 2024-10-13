@@ -1,0 +1,329 @@
+#+begin_export latex
+The package \texttt{tabellchen} has hooks for imports, data types,
+methods and functions.
+#+end_export
+#+begin_src go <<tabellchen.go>>=
+  package tabellchen
+  import (
+	  //<<Imports>>
+  )
+  //<<Types and methods>>
+  //<<Functions>>
+#+end_src
+#+begin_export latex
+\subsection{Type \texttt{ReadConfig}}
+The data type \texttt{ReadConfig} contains parameters for the function
+\texttt{ReadTable}, which we will define in this package.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  type ReadConfig struct {
+	  FilePath    string
+	  Separator   rune
+	  CommentChar rune
+	  HasHeader   bool
+  }
+#+end_src
+#+begin_export latex
+\subsection{Type \texttt{WriteConfig}}
+The data type \texttt{ReadConfig} contains parameters for the function
+\texttt{WriteTable}, which we will define in this package.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  type WriteConfig struct {
+	  File        *os.File
+	  Separator   rune
+  }
+#+end_src
+#+begin_export latex
+We import \texttt{os}.
+#+end_export
+#+begin_src go <<Imports>>=
+  "os"
+#+end_src
+#+begin_export latex
+\subsection{Type \texttt{Table}}
+We define a struct-based data structure for tables. A table contains
+coulmn headers and rows of data. Both headers and data shall contain
+entries of \texttt{string} type.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  type Table struct {
+	  Header []string
+	  Rows [][]string
+  }
+#+end_src
+#+begin_export latex
+\subsubsection{Constructor method \texttt{NewTable}}
+!The method \texttt{NewTable} creates a table with specified header
+!and rows.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  func NewTable(header []string, rows [][]string) Table {
+	  t := Table{
+		  Header: header,
+		  Rows: rows,
+	  }
+	  return t
+  }
+#+end_src
+#+begin_export latex
+\subsubsection{Function \texttt{ReadTable}}
+!The function \texttt{ReadTable} reads data from a file and populates
+!a \texttt{Table}. It accepts a \texttt{ReadConfig} struct.
+
+We 'unpack' the \texttt{config} fields. Then we begin with opening a
+file. Then we create a \texttt{Table} to populate, initialize
+variables for the number of fields and current line, initialize a
+scanner, and mark that we are going to read the first line of the
+file. Then we iterate over lines of the file and check whether the
+scanner has returned an error while reading the file. Should
+everything go well, we return the populated \texttt{Table} and a
+\texttt{nil} error.
+#+end_export
+#+begin_src go <<Functions>>=
+  func ReadTable(config ReadConfig) (Table, error) {
+	  path := config.FilePath
+	  separator := config.Separator
+	  commentChar := config.CommentChar
+	  hasHeader := config.HasHeader
+
+	  file, err := os.Open(path)
+	  if err != nil {
+		  return Table{},
+		  fmt.Errorf("Failed to open file: %v\n", err)
+	  }
+	  defer file.Close()
+	  table := Table{}
+	  numFields := 0
+	  currentLine := 0
+	  scanner := bufio.NewScanner(file)
+	  firstLine := true
+
+	  for scanner.Scan() {
+		  //<<Scan lines and populate the table>>
+	  }
+
+	  if err := scanner.Err(); err != nil {
+		  return Table{},
+		  fmt.Errorf("Error reading file: %v\n", err)
+	  }
+
+	  return table, nil
+  }
+#+end_src
+#+begin_export latex
+We import \texttt{fmt} and \texttt{bufio}.
+#+end_export
+#+begin_src go <<Imports>>=
+  "fmt"
+  "bufio"
+#+end_src
+#+begin_export latex
+As the scanner advances, we read a line of the file. If the line is
+empty or starts with the comment character, we skip it. We split all
+other lines into fields, handle the header, check if a current row has
+the proper length and append it to the \texttt{Table}.
+#+end_export
+#+begin_src go <<Scan lines and populate the table>>=
+  line := scanner.Text()
+  currentLine += 1
+  if len(line) == 0 {
+	  continue
+  }
+  if rune(line[0]) == commentChar {
+	  continue
+  }
+  //<<Split lines into fields>>
+  //<<Handle the first line>>
+  //<<Validate row length>>
+  //<<Append the row to the table>>
+#+end_src
+#+begin_export latex
+The line is getting split into a slice of strings based on a custom
+separator. For this, we use an anonymous function to compare each
+character of the line to the comment character.
+#+end_export
+#+begin_src go <<Split lines into fields>>=
+  fields := strings.FieldsFunc(line, func(c rune) bool {
+	  return c == separator
+  })
+#+end_src
+#+begin_export latex
+We import \texttt{strings}.
+#+end_export
+#+begin_src go <<Imports>>=
+  "strings"
+#+end_src
+#+begin_export latex
+We consider that the first line defines the number of columns in the
+table. We remember the number of fields in the first line. Then we
+handle it as \texttt{Table}'s header if the corresponding option had
+been toggled. If it was hadn't been toggled, we fill the header with
+an empty slice of strings and append the first line to the table.
+#+end_export
+#+begin_src go <<Handle the first line>>=
+  if firstLine {
+	  numFields = len(fields)
+	  if hasHeader {
+		  table.Header = fields
+	  } else {
+		  table.Header = []string{}
+		  table.Rows = append(table.Rows, fields)
+
+	  }
+	  firstLine = false
+	  continue
+  }
+#+end_src
+#+begin_export latex
+If the number of fields in the line does not correspond to the number
+of fields of the first line, we stop and return an empty table and an
+error message.
+#+end_export
+#+begin_src go <<Validate row length>>=
+  if len(fields) != numFields {
+	  return Table{},
+	  fmt.Errorf("Line %d has %d fields, expected %d\n",
+		  currentLine,
+		  len(fields),
+		  numFields)
+  }
+#+end_src
+#+begin_export latex
+Finally, we append a new row to the \texttt{Table}.
+#+end_export
+#+begin_src go <<Append the row to the table>>=
+  table.Rows = append(table.Rows, fields)
+#+end_src
+#+begin_export latex
+\subsubsection{Method \texttt{ColIdByName}}
+To find a column index by its name, we iterate over the table's
+header and compare its fields to the desired column name.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  func (t Table) ColIdByName(colname string) (int, error) {
+	  id := -1
+	  for i, h := range t.Header {
+		  if h == colname {
+			  id = i
+			  break
+		  }
+	  }
+	  var err error = nil
+	  if id == -1 {
+		  err = fmt.Errorf("ColIdByName: " +
+			  "column '%s' not found\n", colname)
+	  }
+	  return id, err
+  }
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{Filter}}
+!The function \texttt{Filter} returns rows of a \texttt{Table} that
+!satisfy a condition.
+
+We begin with identifying the target column number, then we iterate
+over the input rows and append eligible rows to a new table.
+#+end_export
+#+begin_src go <<Functions>>=
+  func Filter(t Table,
+	      col interface{},
+	      cond func(string) bool) (Table, error) {
+	  colId := -1
+	  //<<Find target column index>>
+	  filteredRows := [][]string{}
+	  for _, row := range t.Rows {
+		  if cond(row[colId]) {
+			  filteredRows = append(filteredRows, row)
+		  }
+	  }
+	  return Table{Header: t.Header, Rows: filteredRows}, nil
+  }
+#+end_src
+#+begin_export latex
+There are two ways to identify the target column: 1) specify its
+number explicitly, 2) specify its title, which is a field of the
+header. In the first case, we just assign the number to
+\texttt{colId}.  We also check if the column id is within the range of
+defined columns. In the second case, we find the number of the header
+field.
+#+end_export
+#+begin_src go <<Find target column index>>=
+  switch v := col.(type) {
+  case int:
+	  colId = v
+	  nc := len(t.Rows[0])
+	  if colId > nc {
+		  return t,
+		  fmt.Errorf("Filter: tried to access " +
+			  "column %d, but there are " +
+			  "only %d columns\n", colId, nc)
+	  }
+  case string:
+	  var errColName error = nil
+	  colId, errColName = t.ColIdByName(v)
+	  if errColName != nil {
+		  return t, errColName
+	  }
+  default:
+	  return t,
+	  fmt.Errorf("Filter: can't handle column " +
+		  "index of type %v\n", v)
+  }
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{WriteTable}}
+!The method \texttt{WriteTable} writes a \texttt{Table} into an
+!os.File.
+
+We 'unpack' the \texttt{config}, initialize an error, create a writer
+for the file, write the header and the rows.
+#+end_export
+#+begin_src go <<Types and methods>>=
+  func (t Table) WriteTable(config WriteConfig) error {
+	  file := config.File
+	  separator := config.Separator
+	
+	  var writeErr error
+	  writer := bufio.NewWriter(file)
+	  defer writer.Flush()
+	  //<<Write the header>>
+	  //<<Write the rows>>
+	  return writeErr
+  }
+#+end_src
+#+begin_export latex
+We concatenate the \texttt{Header} fields using the
+\texttt{separator}. Then we write the result appending a newline at
+the end. If the writer has returned an error, we print it.
+#+end_export
+#+begin_src go <<Write the header>>=
+  if len(t.Header) > 0 {
+	  stringHeader := strings.Join(t.Header, string(separator))
+	  _, err := writer.WriteString(stringHeader + "\n")
+	  if err != nil {
+		  writeErr := fmt.Errorf("WriteTable: failed " +
+			  "to write header: %v\n", err) 
+		  return writeErr
+	  }
+  }
+#+end_src
+#+begin_export latex
+We initialize a row counter for writing the rows, concatenate the
+\texttt{Rows} fields using the \texttt{separator}. Then we write the
+result appending a newline at the end. If the writer has returned an
+error, we print the error and the number of the troublesome row.
+#+end_export
+#+begin_src go <<Write the rows>>=
+  rn := 0
+  for _, row := range t.Rows {
+	  stringRow := strings.Join(row, string(separator))
+	  _, err := writer.WriteString(stringRow + "\n")
+	  if err != nil {
+		  writeErr := fmt.Errorf("WriteTable: failed " +
+			  "to write row %d: %v\n", rn, err) 
+		  return writeErr
+	  }
+	  rn += 1
+  }
+#+end_src

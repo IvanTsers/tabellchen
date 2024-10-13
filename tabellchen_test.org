@@ -1,0 +1,211 @@
+#+begin_export latex
+We import the \texttt{testing} package and add hooks for further
+imports and functions.
+#+end_export
+#+begin_src go <<tabellchen_test.go>>=
+  package tabellchen
+  import (
+	  "testing"
+	  //<<Testing imports>>
+  )
+  //<<Testing functions>>
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{ReadTable}}
+We define test cases and iterate over them to test the function
+\texttt{ReadTable}.
+#+end_export
+#+begin_src go <<Testing functions>>=
+  func TestReadTable(t *testing.T) {
+	  //<<ReadTable expected values>>
+	  testCases := []struct {
+		  name string
+		  sep rune
+		  input string
+		  want []interface{}
+	  }{
+		  //<<ReadTable test cases>>
+	  }
+	  for _, tc := range testCases {
+		  //<<Run ReadTable test case>>
+	  }
+  }
+#+end_src
+#+begin_export latex
+We expect to read a proper table of six fields, with or without a
+header. A badly-formatted table should go with an error.
+#+end_export
+#+begin_src go <<ReadTable expected values>>=
+  // Expected tables
+  h := []string{"c1", "c2", "c3"}
+  f := [][]string{{"f1", "f2", "f3"}, {"f4", "f5", "f6"},}
+  h6fields := NewTable(h, f)
+  noh6fields := NewTable([]string{}, f)
+  var errProper error = nil
+  var errBadWidth error = fmt.Errorf("Line 2 has 4 fields," +
+	  " expected 3\n")
+
+  // Expected output slices
+  proper := []interface{}{h6fields, errProper}
+  noheader := []interface{}{noh6fields, errProper}
+  badWidth := []interface{}{Table{}, errBadWidth}
+#+end_src
+#+begin_export latex
+We define test cases for \texttt{TestReadTable}.
+#+end_export
+#+begin_src go <<ReadTable test cases>>=
+  {"properTsv", '\t', "data/proper.tsv", proper},
+  {"properCsv", ',', "data/proper.csv", proper},
+  {"noheader", '\t', "data/noheader.tsv", noheader},
+  {"badWidth", '\t', "data/badWidth.tsv", badWidth},
+#+end_src
+#+begin_export latex
+We import \texttt{fmt}.
+#+end_export
+#+begin_src go <<Testing imports>>=
+  "fmt"
+#+end_src
+#+begin_export latex
+We populate a \texttt{ReadConfig}, call \texttt{ReadTable}, and
+compare its output to the expected data.
+#+end_export
+#+begin_src go <<Run ReadTable test case>>=
+  t.Run(tc.name, func(t *testing.T) {
+	  hasHeader := tc.name != "noheader"
+
+	  config := ReadConfig{
+		  FilePath: tc.input,
+		  Separator: tc.sep,
+		  CommentChar: '#',
+		  HasHeader: hasHeader,
+	  }
+
+	  tab, err := ReadTable(config)
+	  get := []interface{}{tab, err}
+	  if !reflect.DeepEqual(get, tc.want) {
+		  t.Errorf("want:\n%v\nget:\n%v\n",
+			  tc.want, get)
+	  }
+  })
+#+end_src
+#+begin_export latex
+We import \texttt{reflect}.
+#+end_export
+#+begin_src go <<Testing imports>>=
+  "reflect"
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{Filter}}
+We define the expected values, read a test table, filter out all rows
+where the 'Name' is not 'Bob', and compare what we want with what we
+get.
+#+end_export
+#+begin_src go <<Testing functions>>=
+  func isBob(s string) bool {
+	  return s == "Bob"
+  }
+
+  func TestFilter(t *testing.T) {
+	  h := []string{"Name", "Year", "Color"}
+	  f := [][]string{
+		  {"Bob", "2022", "red"},
+		  {"Bob", "2024", "yellow"},
+	  }
+	  want := NewTable(h, f)
+	
+	  config := ReadConfig{
+		  FilePath: "data/bob.csv",
+		  Separator: ',',
+		  CommentChar: '#',
+		  HasHeader: true,
+	  }
+	
+	  tab, _ := ReadTable(config)
+	  get, _ := Filter(tab, "Name", isBob)
+	  if !reflect.DeepEqual(get, want) {
+		  t.Errorf("want:\n%v\nget:\n%v\n",
+			  want, get)
+	  }
+  }
+#+end_src
+#+begin_export latex
+We import \texttt{os}.
+#+end_export
+#+begin_src go <<Testing imports>>=
+  "os"
+#+end_src
+#+begin_export latex
+\subsection{Method \texttt{WriteTable}}
+We define the testing intputs and expected values. Then we read it and
+compare what we want with what we get. After that, we remove the
+testing file we have written.
+#+end_export
+#+begin_src go <<Testing functions>>=
+  func TestWriteTable(t *testing.T) {
+	  header := []string{"c1", "c2", "c3"}
+	  rows := [][]string{
+		  {"f1", "f2", "f3"},
+		  {"f4", "f5", "f6"},
+	  }
+
+	  tab := NewTable(header, rows)
+
+	  outputFile := "data/output.csv"
+	  //<<Write the testing file>>
+	  //<<Read the testing file>>
+	  //<<Compare the written and expected tables>>
+	  err = os.Remove(outputFile)
+	  if err != nil {
+		  t.Fatalf("Failed to remove output file: %v", 
+			  err)
+	  }
+  }
+#+end_src
+#+begin_export latex
+We create a file and write the table into it.
+#+end_export
+#+begin_src go <<Write the testing file>>=
+  file, err := os.Create(outputFile)
+  if err != nil {
+	  t.Fatalf("Failed to create output file: %v", err)
+  }
+  defer file.Close()
+
+  wconfig := WriteConfig{
+	  File: file,
+	  Separator: ',',
+  }
+
+  err = tab.WriteTable(wconfig)
+
+  if err != nil {
+	  t.Fatalf("Failed to write table: %v", err)
+  }
+#+end_src
+#+begin_export latex
+We read the testing file we have just written.
+#+end_export
+#+begin_src go <<Read the testing file>>=
+  rconfig := ReadConfig{
+		  FilePath: "data/output.csv",
+		  Separator: ',',
+		  CommentChar: '#',
+		  HasHeader: true,
+	  }
+
+  writtenTab, err := ReadTable(rconfig)
+  if err != nil {
+	  t.Fatalf("Failed to read output file: %v", err)
+  }
+#+end_src
+#+begin_export latex
+We compare the written and read tables.
+#+end_export
+#+begin_src go <<Compare the written and expected tables>>=
+  tabsAreEqual := reflect.DeepEqual(tab, writtenTab)
+  if !tabsAreEqual {
+	  t.Errorf("Written content mismatch: " + 
+		  "\nwant:\n%s\nget:\n%s\n",
+		  tab, writtenTab)
+  }
+#+end_src
