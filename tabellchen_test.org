@@ -142,14 +142,7 @@ testing file we have written.
 #+end_export
 #+begin_src go <<Testing functions>>=
   func TestWriteTable(t *testing.T) {
-	  header := []string{"c1", "c2", "c3"}
-	  rows := [][]string{
-		  {"f1", "f2", "f3"},
-		  {"f4", "f5", "f6"},
-	  }
-
-	  tab := NewTable(header, rows)
-
+	  //<<Initialize the testing table \texttt{tab}>>
 	  outputFile := "data/output.csv"
 	  //<<Write the testing file>>
 	  //<<Read the testing file>>
@@ -160,6 +153,19 @@ testing file we have written.
 			  err)
 	  }
   }
+#+end_src
+#+begin_export latex
+We initialize a testing table. It has three columns and two rows,
+making the total of six fields.
+#+end_export
+#+begin_src go <<Initialize the testing table \texttt{tab}>>=
+  header := []string{"c1", "c2", "c3"}
+  rows := [][]string{
+	  {"f1", "f2", "f3"},
+	  {"f4", "f5", "f6"},
+  }
+
+  tab := NewTable(header, rows)
 #+end_src
 #+begin_export latex
 We create a file and write the table into it.
@@ -207,5 +213,58 @@ We compare the written and read tables.
 	  t.Errorf("Written content mismatch: " + 
 		  "\nwant:\n%s\nget:\n%s\n",
 		  tab, writtenTab)
+  }
+#+end_src
+#+begin_export latex
+\subsection{Method \texttt{NewColumn}}
+To test \texttt{NewColumn}, we initialize the testing table, call the
+method, and analyze the altered table.
+#+end_export
+#+begin_src go <<Testing functions>>=
+  func TestNewColumn(t *testing.T) {
+	  //<<Initialize the testing table \texttt{tab}>>
+	  oldNumCol := len(tab.Header)
+	  tab.NewColumn("c4")
+	  //<<Analyze the altered table>>
+  }
+#+end_src
+#+begin_src go <<Analyze the altered table>>=
+  newNumCol := len(tab.Header)
+  if newNumCol != oldNumCol + 1 {
+	  t.Errorf("expected %d columns, got %d\n",
+		  oldNumCol + 1, newNumCol)
+  }
+  if tab.Header[3] != "c4" {
+	  t.Errorf("expected %s as the last columns, got %v\n",
+		  "c4", tab.Header[3])
+  }
+#+end_src
+#+begin_export latex
+\subsection{Method \texttt{ReorderColumns}}
+To test \texttt{ReorderColumns}, we initialize the testing table, call
+the method, and analyze the new order of the columns.
+#+end_export
+#+begin_src go <<Testing functions>>=
+  func TestReorderColumns(t *testing.T) {
+	  //<<Initialize the testing table \texttt{tab}>>
+	  tab.ReorderColumns(1, 0, 2)
+
+	  //Check the headers' order
+	  hwant := []string{"c2", "c1", "c3"}
+	  hget := tab.Header
+	  if !reflect.DeepEqual(hwant, hget) {
+		  t.Errorf("wrong new column order:\n" +
+			  "want: %v\nget: %v\n",
+			  hwant, hget)
+	  }
+
+	  //Check the columns' order
+	  rwant := []string{"f5", "f4", "f6"}
+	  rget := tab.Rows[1]
+	  if !reflect.DeepEqual(rwant, rget) {
+		  t.Errorf("wrong new row order:\n" +
+			  "want: %v\nget: %v\n",
+			  rwant, rget)
+	  }
   }
 #+end_src

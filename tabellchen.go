@@ -77,6 +77,52 @@ func (t Table) WriteTable(config WriteConfig) error {
 	return writeErr
 }
 
+// The method NewColumn creates a new empty named column in a Table.
+func (t *Table) NewColumn(colName string) {
+	t.Header = append(t.Header, colName)
+
+	for i := range t.Rows {
+		t.Rows[i] = append(t.Rows[i], "")
+	}
+}
+
+// The method ReorderColumns changes the order of table's columns according to the order of specified indices.
+func (t *Table) ReorderColumns(newOrder ...int) error {
+	fmt.Println(newOrder)
+	fmt.Println(t)
+	numCols := len(t.Header)
+	if len(newOrder) != numCols {
+		return fmt.Errorf("ReorderColumns: "+
+			"expected %d indices, got %d",
+			numCols, len(newOrder))
+	}
+	seen := make(map[int]bool)
+	for _, index := range newOrder {
+		if index < 0 || index >= numCols {
+			return fmt.Errorf("ReorderColumns: "+
+				"Index out of range: %d", index)
+		}
+		if seen[index] {
+			return fmt.Errorf("ReorderColumns: "+
+				"Duplicate index: %d", index)
+		}
+		seen[index] = true
+	}
+	newHeader := make([]string, numCols)
+	for i, newIndex := range newOrder {
+		newHeader[i] = t.Header[newIndex]
+	}
+	t.Header = newHeader
+	for i := range t.Rows {
+		newRow := make([]string, numCols)
+		for j, newIndex := range newOrder {
+			newRow[j] = t.Rows[i][newIndex]
+		}
+		t.Rows[i] = newRow
+	}
+	return nil
+}
+
 // The function ReadTable reads data from a file and populates a Table. It accepts a ReadConfig struct.
 func ReadTable(config ReadConfig) (Table, error) {
 	path := config.FilePath

@@ -86,7 +86,6 @@ func TestWriteTable(t *testing.T) {
 	}
 
 	tab := NewTable(header, rows)
-
 	outputFile := "data/output.csv"
 	file, err := os.Create(outputFile)
 	if err != nil {
@@ -125,5 +124,53 @@ func TestWriteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to remove output file: %v",
 			err)
+	}
+}
+func TestNewColumn(t *testing.T) {
+	header := []string{"c1", "c2", "c3"}
+	rows := [][]string{
+		{"f1", "f2", "f3"},
+		{"f4", "f5", "f6"},
+	}
+
+	tab := NewTable(header, rows)
+	oldNumCol := len(tab.Header)
+	tab.NewColumn("c4")
+	newNumCol := len(tab.Header)
+	if newNumCol != oldNumCol+1 {
+		t.Errorf("expected %d columns, got %d\n",
+			oldNumCol+1, newNumCol)
+	}
+	if tab.Header[3] != "c4" {
+		t.Errorf("expected %s as the last columns, got %v\n",
+			"c4", tab.Header[3])
+	}
+}
+func TestReorderColumns(t *testing.T) {
+	header := []string{"c1", "c2", "c3"}
+	rows := [][]string{
+		{"f1", "f2", "f3"},
+		{"f4", "f5", "f6"},
+	}
+
+	tab := NewTable(header, rows)
+	tab.ReorderColumns(1, 0, 2)
+
+	//Check the headers' order
+	hwant := []string{"c2", "c1", "c3"}
+	hget := tab.Header
+	if !reflect.DeepEqual(hwant, hget) {
+		t.Errorf("wrong new column order:\n"+
+			"want: %v\nget: %v\n",
+			hwant, hget)
+	}
+
+	//Check the columns' order
+	rwant := []string{"f5", "f4", "f6"}
+	rget := tab.Rows[1]
+	if !reflect.DeepEqual(rwant, rget) {
+		t.Errorf("wrong new row order:\n"+
+			"want: %v\nget: %v\n",
+			rwant, rget)
 	}
 }
