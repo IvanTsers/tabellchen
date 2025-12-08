@@ -272,6 +272,36 @@ field.
   }
 #+end_src
 #+begin_export latex
+\subsection{Function \texttt{GreaterOrEqual}}
+!The function \texttt{GreaterOrEqual} returns a \texttt{cond}
+!filtering function that checks if a string converted to a float is
+!greater or equal to a value.
+
+In the produced function, we convert the input string value to a float
+and compare it to the threshold. If the conversion failed, we print an
+error.
+#+end_export
+#+begin_src go <<Functions>>=
+  func GreaterOrEqual(threshold float64) func(string) bool {
+	  return func(s string) bool {
+	      v, err := strconv.ParseFloat(s, 64)
+		  if err != nil {
+			  fmt.Errorf("GreaterOrEqual: failed " +
+				  "to parse the string %s: " +
+				  "%v\n", s, err) 
+		  return false
+	  }
+	      return v >= threshold
+      }
+  }
+#+end_src
+#+begin_export latex
+We import \texttt{strconv}.
+#+end_export
+#+begin_src go <<Imports>>=
+  "strconv"
+#+end_src
+#+begin_export latex
 \subsection{Function \texttt{WriteTable}}
 !The method \texttt{WriteTable} writes a \texttt{Table} into an
 !os.File.

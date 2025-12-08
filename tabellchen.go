@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -217,4 +218,18 @@ func Filter(t Table,
 		}
 	}
 	return Table{Header: t.Header, Rows: filteredRows}, nil
+}
+
+// The function GreaterOrEqual returns a cond filtering function that checks if a string converted to a float is greater or equal to a value.
+func GreaterOrEqual(threshold float64) func(string) bool {
+	return func(s string) bool {
+		v, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			fmt.Errorf("GreaterOrEqual: failed "+
+				"to parse the string %s: "+
+				"%v\n", s, err)
+			return false
+		}
+		return v >= threshold
+	}
 }
