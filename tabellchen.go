@@ -3,6 +3,7 @@ package tabellchen
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -196,7 +197,7 @@ func Filter(t Table,
 		nc := len(t.Rows[0])
 		if colId > nc {
 			return t,
-				fmt.Errorf("Filter: tried to access "+
+				fmt.Errorf("tabellchen: tried to access "+
 					"column %d, but there are "+
 					"only %d columns\n", colId, nc)
 		}
@@ -208,7 +209,7 @@ func Filter(t Table,
 		}
 	default:
 		return t,
-			fmt.Errorf("Filter: can't handle column "+
+			fmt.Errorf("tabellchen: can't handle column "+
 				"index of type %v\n", v)
 	}
 	filteredRows := [][]string{}
@@ -218,6 +219,18 @@ func Filter(t Table,
 		}
 	}
 	return Table{Header: t.Header, Rows: filteredRows}, nil
+}
+
+// The function GetCol retrieves the specified column from a table.
+func GetCol(t Table, colId int) ([]string, error) {
+	var err error = nil
+	var col []string
+	//Is column within bounds?
+	nrow := len(t.Rows)
+	for i := 0; i < nrow; i++ {
+		col = append(col, t.Rows[i][colId])
+	}
+	return col, err
 }
 
 // The function GreaterOrEqual returns a cond filtering function that checks if a string converted to a float is greater or equal to a value.
@@ -232,4 +245,30 @@ func GreaterOrEqual(threshold float64) func(string) bool {
 		}
 		return v >= threshold
 	}
+}
+
+// The function ColUnique returns unique values found in a column.
+func ColUnique(t Table, colId int) []string {
+	col, err := GetCol(t, colId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	colLen := len(col)
+	var res []string
+	res = append(res, col[0])
+
+	for i := 0; i < colLen; i++ {
+		found := false
+		for j := 0; j < len(res); j++ {
+			if col[i] == res[j] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			res = append(res, col[i])
+		}
+	}
+
+	return res
 }

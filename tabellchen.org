@@ -255,7 +255,7 @@ field.
 	  nc := len(t.Rows[0])
 	  if colId > nc {
 		  return t,
-		  fmt.Errorf("Filter: tried to access " +
+		  fmt.Errorf("tabellchen: tried to access " +
 			  "column %d, but there are " +
 			  "only %d columns\n", colId, nc)
 	  }
@@ -267,8 +267,44 @@ field.
 	  }
   default:
 	  return t,
-	  fmt.Errorf("Filter: can't handle column " +
+	  fmt.Errorf("tabellchen: can't handle column " +
 		  "index of type %v\n", v)
+  }
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{GetCol}}
+!The function \texttt{GetCol} retrieves the specified column from a
+!table.
+
+We initialize the return variables, then we check if the specified
+column is within table's bounds. After that, we count the table's rows
+and append each row element of the specified column to the return
+variable \texttt{col}. We return the result once we are finished.
+#+end_export
+#+begin_src go <<Functions>>=
+  func GetCol(t Table, colId int) ([]string, error) {
+	  var err error = nil
+	  var col []string
+	  //Is column within bounds?
+	  nrow := len(t.Rows)
+	  for i := 0; i < nrow; i++ {
+		  col = append(col, t.Rows[i][colId])
+	  }
+	  return col, err
+  }
+#+end_src
+#+begin_export latex
+We count the number of columns and compare the specified column
+identifier to zero and the number of columns the table contains. If
+the specified column is out of bounds, we create an error message and
+return early.
+#+end_export
+#+begin_src go <<Is column within bounds?>>=
+  ncol := len(t.Header)
+  if colId < 0 || colId > ncol {
+	  err = fmt.Errorf("GetCol: column %d is " +
+		  "out of bounds\n", colId)
+	  return col, err
   }
 #+end_src
 #+begin_export latex
@@ -293,6 +329,56 @@ error.
 	  }
 	      return v >= threshold
       }
+  }
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{ColUnique}}
+!The function \tetxttt{ColUnique} returns unique values found in a
+!column.
+
+We begin with extracting the target column from the table. We report
+the error if any and exit. If there are no errors, we measure column's
+length, initialize a variable to store unique values, search for them,
+and return the result.
+#+end_export
+#+begin_src go <<Functions>>=
+  func ColUnique(t Table, colId int) ([]string) {
+	  col, err := GetCol(t, colId)
+	  if err != nil {
+		  log.Fatal(err)
+	  }
+	  colLen := len(col)	
+	  var res []string
+	  res = append(res, col[0])
+
+	  //<<Find unique values>>
+
+	  return res
+  }
+#+end_src
+#+begin_export latex
+We import \texttt{log}.
+#+end_export
+#+begin_src go <<Imports>>=
+  "log"
+#+end_src
+#+begin_export latex
+We iterate over the column slice and compare the current value to
+values we have already found and added to \texttt{res}. If there is a
+new value, we add it to \texttt{res}.
+#+end_export
+#+begin_src go <<Find unique values>>=
+  for i := 0; i < colLen; i++ {
+	  found := false
+	  for j := 0; j < len(res); j++ {
+		  if col[i] == res[j] {
+			  found = true
+			  break
+		  }
+	  }
+	  if !found {
+		  res = append(res, col[i])
+	  }
   }
 #+end_src
 #+begin_export latex
