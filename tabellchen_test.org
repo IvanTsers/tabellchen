@@ -95,7 +95,7 @@ We import \texttt{reflect}.
   "reflect"
 #+end_src
 #+begin_export latex
-\subsection{Function \texttt{Filter}}
+\subsection{Method \texttt{Filter}}
 We define the expected values, read a test table, filter out all rows
 where the 'Name' is not 'Bob', and compare what we want with what we
 get.
@@ -112,16 +112,20 @@ get.
 		  {"Bob", "2024", "yellow"},
 	  }
 	  want := NewTable(h, f)
-	
+
 	  config := ReadConfig{
 		  FilePath: "data/bob.csv",
 		  Separator: ',',
 		  CommentChar: '#',
 		  HasHeader: true,
 	  }
-	
+
 	  tab, _ := ReadTable(config)
-	  get, _ := Filter(tab, "Name", isBob)
+	  err := tab.Filter(0, isBob)
+	  if err != nil {
+		  fmt.Fprintln(os.Stderr, err)
+	  }
+	  get := tab
 	  if !reflect.DeepEqual(get, want) {
 		  t.Errorf("want:\n%v\nget:\n%v\n",
 			  want, get)

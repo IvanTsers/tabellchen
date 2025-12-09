@@ -32,7 +32,7 @@ func NewTable(header []string, rows [][]string) Table {
 	}
 	return t
 }
-func (t Table) ColIdByName(colname string) (int, error) {
+func (t *Table) ColIdByName(colname string) (int, error) {
 	id := -1
 	for i, h := range t.Header {
 		if h == colname {
@@ -47,9 +47,56 @@ func (t Table) ColIdByName(colname string) (int, error) {
 	}
 	return id, err
 }
+func (t *Table) checkColBounds(colId int) error {
+	var err error
+	ncol := len(t.Header)
+	if colId < 0 || colId >= ncol {
+		err = fmt.Errorf("column %d is out of bounds "+
+			"in the table %+v\n", colId, t)
+	}
+	return err
+}
+
+// The method GetCol retrieves the specified column from a table.
+func (t *Table) GetCol(colId int) ([]string, error) {
+	var err error = nil
+	var col []string
+	//Is column within bounds?
+	nrow := len(t.Rows)
+	for i := 0; i < nrow; i++ {
+		col = append(col, t.Rows[i][colId])
+	}
+	return col, err
+}
+
+// The method ColUnique returns unique values found in a column.
+func (t *Table) ColUnique(colId int) []string {
+	col, err := t.GetCol(colId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	colLen := len(col)
+	var res []string
+	res = append(res, col[0])
+
+	for i := 0; i < colLen; i++ {
+		found := false
+		for j := 0; j < len(res); j++ {
+			if col[i] == res[j] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			res = append(res, col[i])
+		}
+	}
+
+	return res
+}
 
 // The method WriteTable writes a Table into an os.File.
-func (t Table) WriteTable(config WriteConfig) error {
+func (t *Table) WriteTable(config WriteConfig) error {
 	file := config.File
 	separator := config.Separator
 
@@ -90,8 +137,6 @@ func (t *Table) NewColumn(colName string) {
 
 // The method ReorderColumns changes the order of table's columns according to the order of specified indices.
 func (t *Table) ReorderColumns(newOrder ...int) error {
-	fmt.Println(newOrder)
-	fmt.Println(t)
 	numCols := len(t.Header)
 	if len(newOrder) != numCols {
 		return fmt.Errorf("ReorderColumns: "+
@@ -186,51 +231,22 @@ func ReadTable(config ReadConfig) (Table, error) {
 	return table, nil
 }
 
-// The function Filter returns rows of a Table that satisfy a condition.
-func Filter(t Table,
-	col interface{},
-	cond func(string) bool) (Table, error) {
-	colId := -1
-	switch v := col.(type) {
-	case int:
-		colId = v
-		nc := len(t.Rows[0])
-		if colId > nc {
-			return t,
-				fmt.Errorf("tabellchen: tried to access "+
-					"column %d, but there are "+
-					"only %d columns\n", colId, nc)
-		}
-	case string:
-		var errColName error = nil
-		colId, errColName = t.ColIdByName(v)
-		if errColName != nil {
-			return t, errColName
-		}
-	default:
-		return t,
-			fmt.Errorf("tabellchen: can't handle column "+
-				"index of type %v\n", v)
+// The method Filter returns rows of a Table that satisfy a condition.
+func (t *Table) Filter(colId int, cond func(string) bool) error {
+	var err error
+	err = t.checkColBounds(colId)
+	if err != nil {
+		return err
 	}
+
 	filteredRows := [][]string{}
 	for _, row := range t.Rows {
 		if cond(row[colId]) {
 			filteredRows = append(filteredRows, row)
 		}
 	}
-	return Table{Header: t.Header, Rows: filteredRows}, nil
-}
-
-// The function GetCol retrieves the specified column from a table.
-func GetCol(t Table, colId int) ([]string, error) {
-	var err error = nil
-	var col []string
-	//Is column within bounds?
-	nrow := len(t.Rows)
-	for i := 0; i < nrow; i++ {
-		col = append(col, t.Rows[i][colId])
-	}
-	return col, err
+	t.Rows = filteredRows
+	return err
 }
 
 // The function GreaterOrEqual returns a cond filtering function that checks if a string converted to a float is greater or equal to a value.
@@ -245,30 +261,4 @@ func GreaterOrEqual(threshold float64) func(string) bool {
 		}
 		return v >= threshold
 	}
-}
-
-// The function ColUnique returns unique values found in a column.
-func ColUnique(t Table, colId int) []string {
-	col, err := GetCol(t, colId)
-	if err != nil {
-		log.Fatal(err)
-	}
-	colLen := len(col)
-	var res []string
-	res = append(res, col[0])
-
-	for i := 0; i < colLen; i++ {
-		found := false
-		for j := 0; j < len(res); j++ {
-			if col[i] == res[j] {
-				found = true
-				break
-			}
-		}
-		if !found {
-			res = append(res, col[i])
-		}
-	}
-
-	return res
 }

@@ -1,11 +1,12 @@
 NAME = tabellchen
-date = $(shell git log | grep -m 1 Date | sed -r 's/Date: +[A-Z][a-z]+ ([A-Z][a-z]+) ([0-9]+) [^ ]+ ([0-9]+) .+/\2_\1_\3/')
-version = $(shell git describe)
+
+# Build the version string
+TAG = $(shell git tag -l | sort -V | tail -n1)
+VERSION = $(shell git log --pretty=format:"%cs, ${TAG}-%h" -n 1)
+
 all: $(NAME)Doc.pdf
-	echo $(date) | tr '_' ' ' > date.txt
-	echo $(version) | tr '-' ' ' | awk '{printf "%s", $$1; if ($$2) printf "-%s", $$2; printf n}' > version.txt
+	echo $(VERSION) > version.txt
 	latex $(NAME)Doc
-#	bibtex $(NAME)Doc
 	latex $(NAME)Doc
 	latex $(NAME)Doc
 	dvipdf -dALLOWPSTRANSPARENCY $(NAME)Doc

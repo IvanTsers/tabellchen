@@ -201,7 +201,7 @@ To find a column index by its name, we iterate over the table's
 header and compare its fields to the desired column name.
 #+end_export
 #+begin_src go <<Types and methods>>=
-  func (t Table) ColIdByName(colname string) (int, error) {
+  func (t *Table) ColIdByName(colname string) (int, error) {
 	  id := -1
 	  for i, h := range t.Header {
 		  if h == colname {
@@ -218,62 +218,58 @@ header and compare its fields to the desired column name.
   }
 #+end_src
 #+begin_export latex
-\subsection{Function \texttt{Filter}}
-!The function \texttt{Filter} returns rows of a \texttt{Table} that
+\subsection{Method \texttt{Filter}}
+!The method \texttt{Filter} returns rows of a \texttt{Table} that
 !satisfy a condition.
 
-We begin with identifying the target column number, then we iterate
-over the input rows and append eligible rows to a new table.
+We check if the specified column is within table's bounds. If not so,
+we return early. After the check, we iterate over the input rows and
+append eligible rows to a new table. We replace the original table
+with the filtered one at the end.
 #+end_export
 #+begin_src go <<Functions>>=
-  func Filter(t Table,
-	      col interface{},
-	      cond func(string) bool) (Table, error) {
-	  colId := -1
-	  //<<Find target column index>>
+  func (t *Table) Filter (colId int, cond func(string) bool) error {
+	  var err error
+	  err = t.checkColBounds(colId)
+	  if err != nil {
+		  return err
+	  }
+	
 	  filteredRows := [][]string{}
 	  for _, row := range t.Rows {
 		  if cond(row[colId]) {
 			  filteredRows = append(filteredRows, row)
 		  }
 	  }
-	  return Table{Header: t.Header, Rows: filteredRows}, nil
+	  t.Rows = filteredRows
+	  return err
   }
 #+end_src
 #+begin_export latex
-There are two ways to identify the target column: 1) specify its
-number explicitly, 2) specify its title, which is a field of the
-header. In the first case, we just assign the number to
-\texttt{colId}.  We also check if the column id is within the range of
-defined columns. In the second case, we find the number of the header
-field.
+\subsection{Helper method \texttt{checkColBounds}}
+This helper method checks if the specified column index is within the
+bounds of the table. It returns a non-\texttt{nil} error if the index
+is out of bounds.
+
+We count the number of columns and compare the specified column
+identifier to zero and the number of columns the table contains. If
+the specified column is out of bounds, we create an error message and
+return early.
 #+end_export
-#+begin_src go <<Find target column index>>=
-  switch v := col.(type) {
-  case int:
-	  colId = v
-	  nc := len(t.Rows[0])
-	  if colId > nc {
-		  return t,
-		  fmt.Errorf("tabellchen: tried to access " +
-			  "column %d, but there are " +
-			  "only %d columns\n", colId, nc)
+#+begin_src go <<Types and methods>>=
+  func (t *Table) checkColBounds (colId int) error {
+	  var err error
+	  ncol := len(t.Header)
+	  if colId < 0 || colId >= ncol {
+		  err = fmt.Errorf("column %d is out of bounds " +
+			  "in the table %+v\n", colId, t)
 	  }
-  case string:
-	  var errColName error = nil
-	  colId, errColName = t.ColIdByName(v)
-	  if errColName != nil {
-		  return t, errColName
-	  }
-  default:
-	  return t,
-	  fmt.Errorf("tabellchen: can't handle column " +
-		  "index of type %v\n", v)
+	  return err
   }
 #+end_src
 #+begin_export latex
-\subsection{Function \texttt{GetCol}}
-!The function \texttt{GetCol} retrieves the specified column from a
+\subsection{Method \texttt{GetCol}}
+!The method \texttt{GetCol} retrieves the specified column from a
 !table.
 
 We initialize the return variables, then we check if the specified
@@ -281,8 +277,8 @@ column is within table's bounds. After that, we count the table's rows
 and append each row element of the specified column to the return
 variable \texttt{col}. We return the result once we are finished.
 #+end_export
-#+begin_src go <<Functions>>=
-  func GetCol(t Table, colId int) ([]string, error) {
+#+begin_src go <<Types and methods>>=
+  func (t *Table) GetCol(colId int) ([]string, error) {
 	  var err error = nil
 	  var col []string
 	  //Is column within bounds?
@@ -332,8 +328,8 @@ error.
   }
 #+end_src
 #+begin_export latex
-\subsection{Function \texttt{ColUnique}}
-!The function \texttt{ColUnique} returns unique values found in a
+\subsection{Method \texttt{ColUnique}}
+!The method \texttt{ColUnique} returns unique values found in a
 !column.
 
 We begin with extracting the target column from the table. We report
@@ -341,9 +337,9 @@ the error if any and exit. If there are no errors, we measure column's
 length, initialize a variable to store unique values, search for them,
 and return the result.
 #+end_export
-#+begin_src go <<Functions>>=
-  func ColUnique(t Table, colId int) ([]string) {
-	  col, err := GetCol(t, colId)
+#+begin_src go <<Types and methods>>=
+  func (t *Table) ColUnique(colId int) []string {
+	  col, err := t.GetCol(colId)
 	  if err != nil {
 		  log.Fatal(err)
 	  }
@@ -388,7 +384,7 @@ We import \texttt{strconv}.
   "strconv"
 #+end_src
 #+begin_export latex
-\subsection{Function \texttt{WriteTable}}
+\subsection{Method \texttt{WriteTable}}
 !The method \texttt{WriteTable} writes a \texttt{Table} into an
 !os.File.
 
@@ -396,7 +392,7 @@ We 'unpack' the \texttt{config}, initialize an error, create a writer
 for the file, write the header and the rows.
 #+end_export
 #+begin_src go <<Types and methods>>=
-  func (t Table) WriteTable(config WriteConfig) error {
+  func (t *Table) WriteTable(config WriteConfig) error {
 	  file := config.File
 	  separator := config.Separator
 	
@@ -470,8 +466,6 @@ coulmns in-place. The only return of the method is an error.
 #+end_export
 #+begin_src go <<Types and methods>>=
   func (t *Table) ReorderColumns(newOrder ...int) error {
-	  fmt.Println(newOrder)
-	  fmt.Println(t)
 	  //<<Validate the new order>>
 	  //<<Reorder the header>>
 	  //<<Reorder the rows>>

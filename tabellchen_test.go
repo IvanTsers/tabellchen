@@ -72,7 +72,11 @@ func TestFilter(t *testing.T) {
 	}
 
 	tab, _ := ReadTable(config)
-	get, _ := Filter(tab, "Name", isBob)
+	err := tab.Filter(0, isBob)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	get := tab
 	if !reflect.DeepEqual(get, want) {
 		t.Errorf("want:\n%v\nget:\n%v\n",
 			want, get)
