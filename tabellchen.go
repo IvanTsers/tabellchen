@@ -49,10 +49,10 @@ func (t *Table) ColIdByName(colname string) (int, error) {
 }
 func (t *Table) checkColBounds(colId int) error {
 	var err error
-	ncol := len(t.Header)
+	ncol := len(t.Rows[0])
 	if colId < 0 || colId >= ncol {
-		err = fmt.Errorf("column %d is out of bounds "+
-			"in the table %+v\n", colId, t)
+		err = fmt.Errorf("column %d is out of bounds",
+			colId)
 	}
 	return err
 }
