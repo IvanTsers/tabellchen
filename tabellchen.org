@@ -333,7 +333,7 @@ error.
 #+end_src
 #+begin_export latex
 \subsection{Function \texttt{ColUnique}}
-!The function \tetxttt{ColUnique} returns unique values found in a
+!The function \texttt{ColUnique} returns unique values found in a
 !column.
 
 We begin with extracting the target column from the table. We report
