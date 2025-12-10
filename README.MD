@@ -1,4 +1,4 @@
-# [`tabellchen`](https://owncloud.gwdg.de/index.php/apps/files/?dir=/github_docs&fileid=3024168943): dealing with tables in `Go`
+# [`tabellchen`](https://owncloud.gwdg.de/index.php/s/ONlDn6cvdzzwenD): dealing with tables in `Go`
 
 ## Quick tutorial
 
