@@ -262,3 +262,16 @@ func GreaterOrEqual(threshold float64) func(string) bool {
 		return v >= threshold
 	}
 }
+
+// The function DistinctByCol returns a cond filtering function that checks if a string is unique. The first occurence of a string is always kept.
+func DistinctByCol() func(string) bool {
+	seen := make(map[string]bool)
+
+	return func(s string) bool {
+		if seen[s] {
+			return false
+		}
+		seen[s] = true
+		return true
+	}
+}

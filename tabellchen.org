@@ -234,7 +234,7 @@ with the filtered one at the end.
 	  if err != nil {
 		  return err
 	  }
-	
+
 	  filteredRows := [][]string{}
 	  for _, row := range t.Rows {
 		  if cond(row[colId]) {
@@ -324,6 +324,29 @@ error.
 		  return false
 	  }
 	      return v >= threshold
+      }
+  }
+#+end_src
+#+begin_export latex
+\subsection{Function \texttt{DistinctByCol}}
+!The function \texttt{DistinctByCol} returns a \texttt{cond} filtering
+!function that checks if a string is unique. The first occurence of a
+!string is always kept.
+
+We initialize a map of seen strings. In the produced function, we
+check if the current string has been seen already. If not so, we add
+it to the map.
+#+end_export
+#+begin_src go <<Functions>>=
+  func DistinctByCol() func(string) bool {
+      seen := make(map[string]bool)
+
+      return func(s string) bool {
+	  if seen[s] {
+	      return false
+	  }
+	  seen[s] = true
+	  return true
       }
   }
 #+end_src
